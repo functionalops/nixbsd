@@ -1,0 +1,66 @@
+diff -ru nix-1.11.2.orig/src/libstore/build.cc nix-1.11.2/src/libstore/build.cc
+--- nix-1.11.2.orig/src/libstore/build.cc	2016-02-11 09:12:17.000000000 +0000
++++ nix-1.11.2/src/libstore/build.cc	2016-03-13 22:02:37.231937000 +0000
+@@ -37,6 +37,8 @@
+ /* chroot-like behavior from Apple's sandbox */
+ #if __APPLE__
+     #define DEFAULT_ALLOWED_IMPURE_PREFIXES "/System/Library /usr/lib /dev /bin/sh"
++#elif __FreeBSD__
++    #define DEFAULT_ALLOWED_IMPURE_PREFIXES "/usr/lib /dev /bin/sh"
+ #else
+     #define DEFAULT_ALLOWED_IMPURE_PREFIXES ""
+ #endif
+@@ -2058,7 +2060,7 @@
+         for (auto & i : drv->outputs)
+             dirsInChroot.erase(i.second.path);
+ 
+-#elif __APPLE__
++#elif __APPLE__ || __FreeBSD__
+         /* We don't really have any parent prep work to do (yet?)
+            All work happens in the child, instead. */
+ #else
+diff -ru nix-1.11.2.orig/src/libstore/globals.cc nix-1.11.2/src/libstore/globals.cc
+--- nix-1.11.2.orig/src/libstore/globals.cc	2016-02-11 09:12:17.000000000 +0000
++++ nix-1.11.2/src/libstore/globals.cc	2016-03-13 22:03:33.173561000 +0000
+@@ -79,7 +79,7 @@
+     nixDaemonSocketFile = canonPath(nixStateDir + DEFAULT_SOCKET_PATH);
+ 
+     // should be set with the other config options, but depends on nixLibexecDir
+-#ifdef __APPLE__
++#if defined(__APPLE__)
+     preBuildHook = nixLibexecDir + "/nix/resolve-system-dependencies.pl";
+ #endif
+ }
+diff -ru nix-1.11.2.orig/src/libutil/archive.cc nix-1.11.2/src/libutil/archive.cc
+--- nix-1.11.2.orig/src/libutil/archive.cc	2016-02-11 09:12:17.000000000 +0000
++++ nix-1.11.2/src/libutil/archive.cc	2016-03-13 21:48:36.659465000 +0000
+@@ -23,7 +23,7 @@
+ 
+ 
+ bool useCaseHack =
+-#if __APPLE__
++#if __APPLE__ || __FreeBSD__
+     true;
+ #else
+     false;
+diff -ru nix-1.11.2.orig/src/libutil/util.cc nix-1.11.2/src/libutil/util.cc
+--- nix-1.11.2.orig/src/libutil/util.cc	2016-02-11 09:12:17.000000000 +0000
++++ nix-1.11.2/src/libutil/util.cc	2016-03-13 22:05:09.825331000 +0000
+@@ -15,7 +15,7 @@
+ #include <fcntl.h>
+ #include <limits.h>
+ 
+-#ifdef __APPLE__
++#if defined(__APPLE__) || defined(__FreeBSD__)
+ #include <sys/syscall.h>
+ #endif
+ 
+@@ -885,7 +885,7 @@
+             throw SysError("setting uid");
+ 
+         while (true) {
+-#ifdef __APPLE__
++#if defined(__APPLE__) || defined(__FreeBSD__)
+             /* OSX's kill syscall takes a third parameter that, among
+                other things, determines if kill(-1, signo) affects the
+                calling process. In the OSX libc, it's set to true,

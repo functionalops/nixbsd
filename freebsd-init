@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+set -x 
+declare -r nix_root="/nix"
+declare -r nixbld_group="nixbld"
+
+sudo mkdir "${nix_root}"
+sudo chmod 0755 "${nix_root}"
+if ! pw group show "${nixbld_group}" >/dev/null 2>&1; then
+  sudo pw group add "${nixbld_group}"
+fi
+for i in $(seq 1 10); do
+  if ! pw user show "${nixbld_group}${i}" >/dev/null 2>&1; then
+    sudo pw user add "${nixbld_group}${i}" -d /var/empty -s /sbin/nologin -g "${nixbld_group}"
+    sudo pw group mod "${nixbld_group}" -m "${nixbld_group}${i}"
+  fi
+done
+sudo nix-store --init
+sudo nix-channel --add http://nixos.org/channels/nixpkgs-unstable
+sudo nix-channel --update

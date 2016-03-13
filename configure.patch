@@ -1,0 +1,12 @@
+--- configure.orig	2016-03-13 20:37:12.461378000 +0000
++++ configure	2016-03-13 20:37:45.509057000 +0000
+@@ -7113,7 +7113,7 @@
+ # Do we have GNU tar?
+ { $as_echo "$as_me:${as_lineno-$LINENO}: checking if you have a recent GNU tar" >&5
+ $as_echo_n "checking if you have a recent GNU tar... " >&6; }
+-if $tar --version 2> /dev/null | grep -q GNU && tar cvf /dev/null --warning=no-timestamp ./config.log > /dev/null; then
++if $tar --version 2> /dev/null | grep -q GNU && $tar cvf /dev/null --warning=no-timestamp ./config.log > /dev/null; then
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+ $as_echo "yes" >&6; }
+     tarFlags="--warning=no-timestamp"
+
