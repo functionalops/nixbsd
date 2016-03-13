@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# piratehook: bootstrap for Nix for building on FreeBSD
+
+# we are totes awesomesauce
+set -eu
+
+set -x
+
+if [ "$#" -ne 1 ]; then
+  >&2 echo "Usage: $0 VERSION"
+  exit 1
+else
+  declare -r version="$1"
+fi
+
+function cleanup() {
+  if [ -d "${tmp_dir}" ]; then
+    rm -rf "${tmp_dir}"
+  fi
+}
+
+function patch_shebang() {
+  local -r file=$1
+
+  mv "${file}" "${file}.unpatched"
+  {
+    echo "#!/usr/bin/env bash"
+    cat "${file}.unpatched"
+  } > "${file}"
+  chmod 0755 "${file}"
+}
+
+#trap cleanup EXIT
+declare -r tmp_dir="$(mktemp -d -t "nix-${version}")"
+declare -r tarball="${tmp_dir}/nix-${version}.tar.bz2"
+declare -r nix_url="https://nixos.org/releases/nix/nix-${version}/nix-${version}.tar.bz2"
+
+fetch --output "${tarball}" "${nix_url}"
+
+tar -C "${tmp_dir}" -jxvf "${tarball}"
+pushd "${tmp_dir}/nix-${version}"
+  echo "Started build in: $(pwd)"
+  export PATH="/usr/local/bin:$PATH"
+  patch_shebang "bootstrap.sh"
+  export OPENSSL_LIBS="-lcrypto"
+  export OPENSSL_CFLAGS="-I/usr/include"
+  export LIBLZMA_CFLAGS="-I/usr/local/include"
+  export LIBLZMA_LIBS="-llzma"
+  export CC=clang36
+  export CXX=clang++36
+  export CPP=clang-cpp36
+  export tar="/usr/local/bin/gtar"
+  patch_shebang "bootstrap.sh"
+  "./bootstrap.sh" # this script regenerates the configure or i'd patch them both at the same time
+  patch_shebang "configure"
+  patch -p1 </casey/src/configure.patch
+  "./configure" --prefix=/usr/local
+  sed -I .bak -e "s|/usr/bin/tar|/usr/local/bin/gtar|" config.status
+  patch_shebang "config.status"
+  patch -p1 </casey/src/freebsd-grosshack.patch
+  patch -p1 </casey/src/apple-hacks.patch
+  gmake
+  sudo gmake install
+  gmake installcheck
+popd
+

@@ -1,0 +1,64 @@
+diff -ru nix-1.11.2/src/libexpr/parser-tab.cc nix-1.11.2/src/libexpr/parser-tab.cc
+--- nix-1.11.2/src/libexpr/parser-tab.cc	2016-02-11 09:12:53.000000000 +0000
++++ nix-1.11.2/src/libexpr/parser-tab.cc	2016-03-13 04:25:33.159087000 +0000
+@@ -1143,7 +1143,7 @@
+ static void yyexpandGLRStack (yyGLRStack* yystackp);
+ #endif
+ 
+-static _Noreturn void
++static void
+ yyFail (yyGLRStack* yystackp, YYLTYPE *yylocp, void * scanner, nix::ParseData * data, const char* yymsg)
+ {
+   if (yymsg != YY_NULLPTR)
+@@ -1151,7 +1151,7 @@
+   YYLONGJMP (yystackp->yyexception_buffer, 1);
+ }
+ 
+-static _Noreturn void
++static void
+ yyMemoryExhausted (yyGLRStack* yystackp)
+ {
+   YYLONGJMP (yystackp->yyexception_buffer, 2);
+diff -ru nix-1.11.2/tests/tarball.sh nix-1.11.2/tests/tarball.sh
+--- nix-1.11.2/tests/tarball.sh	2016-02-11 09:12:17.000000000 +0000
++++ nix-1.11.2/tests/tarball.sh	2016-03-13 04:45:27.281323000 +0000
+@@ -12,7 +12,7 @@
+ cp config.nix dependencies.builder*.sh $tarroot/
+ 
+ tarball=$TEST_ROOT/tarball.tar.xz
+-(cd $TEST_ROOT && tar c tarball) | xz > $tarball
++(cd $TEST_ROOT && tar -cf - tarball) | xz > $tarball
+ 
+ nix-env -f file://$tarball -qa --out-path | grep -q dependencies
+
+diff -ru nix-1.11.2/tests/pass-as-file.sh nix-1.11.2/tests/pass-as-file.sh
+--- nix-1.11.2/tests/pass-as-file.sh	2016-02-11 09:12:17.000000000 +0000
++++ nix-1.11.2/tests/pass-as-file.sh	2016-03-13 06:25:54.285441000 +0000
+@@ -11,7 +11,7 @@
+   foo = [ \"xyzzy\" ];
+   builder = builtins.toFile \"builder.sh\" ''
+     [ \"\$(cat \$fooPath)\" = xyzzy ]
+-    touch \$out
++    /usr/bin/touch \$out
+   '';
+ }
+ ")
+diff -ru nix-1.11.2/tests/check-reqs.nix nix-1.11.2/tests/check-reqs.nix
+--- nix-1.11.2/tests/check-reqs.nix	2016-02-11 09:12:17.000000000 +0000
++++ nix-1.11.2/tests/check-reqs.nix	2016-03-13 06:21:56.237950000 +0000
+@@ -3,12 +3,12 @@
+ rec {
+   dep1 = mkDerivation {
+     name = "check-reqs-dep1";
+-    builder = builtins.toFile "builder.sh" "mkdir $out; touch $out/file1";
++    builder = builtins.toFile "builder.sh" "mkdir $out; /usr/bin/touch $out/file1";
+   };
+ 
+   dep2 = mkDerivation {
+     name = "check-reqs-dep2";
+-    builder = builtins.toFile "builder.sh" "mkdir $out; touch $out/file2";
++    builder = builtins.toFile "builder.sh" "mkdir $out; /usr/bin/touch $out/file2";
+   };
+ 
+   deps = mkDerivation {
+ 
